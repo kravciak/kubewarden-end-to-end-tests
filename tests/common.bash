@@ -15,9 +15,11 @@ function helm() {
 
 # Upgrade helm chart, but won't install if it does not exist
 function helm_up {
+    [ $1 = 'kubewarden-controller' ] && extraparams='--set auditScanner.image.tag=latest'
+
     helm upgrade --devel --wait \
         --namespace $NAMESPACE --create-namespace \
-        "${@:2}" $1 $KUBEWARDEN_CHARTS_LOCATION/$1
+        "${@:2}" $1 $KUBEWARDEN_CHARTS_LOCATION/$1 ${extraparams:-}
 
     # kubewarden-defaults ignore wait param, so rollout status would fail without retry (does not exist yet)
     # retry function requires full command, not a function

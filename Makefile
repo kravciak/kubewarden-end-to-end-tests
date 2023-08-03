@@ -71,7 +71,7 @@ define install-kubewarden =
 		$(KUBEWARDEN_CRDS_CHART_RELEASE) $(KUBEWARDEN_CHARTS_LOCATION)/kubewarden-crds
 	$(helm_in) --version $(KUBEWARDEN_CONTROLLER_CHART_VERSION) \
 		--values $(ROOT_RESOURCES_DIR)/default-kubewarden-controller-values.yaml \
-		$(KUBEWARDEN_CONTROLLER_CHART_RELEASE) $(KUBEWARDEN_CHARTS_LOCATION)/kubewarden-controller
+		$(KUBEWARDEN_CONTROLLER_CHART_RELEASE) $(KUBEWARDEN_CHARTS_LOCATION)/kubewarden-controller --set auditScanner.image.tag=latest
 	$(helm_in) --version $(KUBEWARDEN_DEFAULTS_CHART_VERSION) \
 		--values $(ROOT_RESOURCES_DIR)/default-kubewarden-defaults-values.yaml \
 		$(KUBEWARDEN_DEFAULTS_CHART_RELEASE) $(KUBEWARDEN_CHARTS_LOCATION)/kubewarden-defaults

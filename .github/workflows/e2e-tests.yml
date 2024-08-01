@@ -46,10 +46,13 @@ jobs:
           path: "e2e-tests"
           ref: 'main'
           submodules: 'true'
-      - name: "Setup bats testing framework"
-        uses: mig4/setup-bats@v1.2.0
+      - name: "Setup Bats and bats libs"
+        uses: bats-core/bats-action@2.0.0
         with:
-          bats-version: 1.7.0
+          detik-install: false
+          file-install: false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Install kwctl"
         uses: kubewarden/github-actions/kwctl-installer@main
         with:

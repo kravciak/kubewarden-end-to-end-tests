@@ -18,14 +18,14 @@
 
 | Trigger            	| Rancher    	| Mode    	| UI Ext 	| K3S  	| Notes                            	| Status 	|
 |--------------------	|------------	|---------	|--------	|------	|----------------------------------	|:------:	|
-| nightly (schedule) 	| 2.7 (p)    	| base    	| prime  	| 1.27 	|                                  	| [![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=schedule)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Aschedule) |
-|                    	| 2.8 (p)    	| base    	| prime  	| 1.28 	|                                  	|        	|
-|                    	| 2.9 (p)    	| base    	| prime  	| 1.30 	| install kubewarden from UI       	|        	|
-|                    	| 2.9 (p)    	| upgrade 	| prime  	| 1.30 	| upgrade path of kubewarden stack 	|        	|
-|                    	| 2.9 (p)    	| fleet   	| prime  	| 1.30 	| install kubewarden by fleet      	|        	|
-| release (tag)      	| ^          	| ^       	| github 	| ^    	| same matrix as nightly job       	| [![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=workflow_run)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Aworkflow_run) |
-| pull request       	| latest (c) 	| base    	| source 	| 1.30 	|                                  	| [![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=pull_request)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Apull_request) |
-| manual             	| any        	| any      	| any    	| any  	|                                  	| |
+| nightly (schedule) 	| 2.7 (p)    	| base    	| prime  	| 1.27 	|                                  	| [![E2E](https://github.com/rancher/kubewarden-ui/actions/workflows/playwright.yml/badge.svg?event=schedule)](https://github.com/rancher/kubewarden-ui/actions/workflows/playwright.yml?query=event%3Aschedule) |
+|                    	| 2.8 (p)    	| base    	| prime  	| 1.28 	|                                  	|  |
+|                    	| 2.9 (p)    	| base    	| prime  	| 1.30 	| install kubewarden from UI       	|  |
+|                    	| 2.9 (p)    	| upgrade 	| prime  	| 1.30 	| upgrade path of kubewarden stack 	|  |
+|                    	| 2.9 (p)    	| fleet   	| prime  	| 1.30 	| install kubewarden by fleet      	|  |
+| release (tag)      	| ^          	| ^       	| github 	| ^    	| same matrix as nightly job       	| [![E2E](https://github.com/rancher/kubewarden-ui/actions/workflows/playwright.yml/badge.svg?event=workflow_run)](https://github.com/rancher/kubewarden-ui/actions/workflows/playwright.yml?query=event%3Aworkflow_run) |
+| pull request       	| latest (c) 	| base    	| source 	| 1.30 	|                                  	| [![E2E](https://github.com/rancher/kubewarden-ui/actions/workflows/playwright.yml/badge.svg?event=pull_request)](https://github.com/rancher/kubewarden-ui/actions/workflows/playwright.yml?query=event%3Apull_request) |
+| manual             	| any        	| any      	| any    	| any  	|                                  	|  |
 
 
 # kubewarden-end-to-end-tests

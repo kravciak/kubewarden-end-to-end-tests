@@ -1,8 +1,32 @@
 [![Kubewarden Infra Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-infra.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#infra-scope)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 
-[![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=schedule)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Aschedule)
-[![E2E](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml/badge.svg?event=schedule)](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml?query=event%3Aschedule)
+## [Kubewarden charts](https://github.com/kubewarden/helm-charts/blob/main/.github/workflows/e2e-tests.yml)
+
+| Trigger            	| Charts          	| K3S 	| Notes               	| Status 	|
+|--------------------	|-----------------	|-----	|----------------------	| :--------: |
+| nightly (schedule) 	| latest tag      	| k3d 	|                      	| [![E2E](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml/badge.svg?event=schedule)](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml?query=event%3Aschedule) |
+|                    	| source (main)   	| k3d 	| :latest images       	|  |
+| release (tag)      	| release tag     	| k3d 	|                      	| [![E2E](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml/badge.svg?event=workflow_run)](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml?query=event%3Aworkflow_run) |
+|                    	| previous stable 	| k3d 	| upgrade to released  	|  |
+|                    	| release tag     	| old 	| oldest supported k8s 	|  |
+| pull request       	| source (pr)     	| k3d 	|                      	| [![E2E](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml/badge.svg?event=pull_request)](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml?query=event%3Apull_request) |
+| manual             	| any             	| any 	| any                  	| [![E2E](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml/badge.svg?event=workflow_dispatch)](https://github.com/kubewarden/helm-charts/actions/workflows/e2e-tests.yml?query=event%3Aworkflow_dispatch) |
+
+
+## [Kubewarden UI](https://github.com/rancher/kubewarden-ui/blob/main/.github/workflows/playwright.yml)
+
+| Trigger            	| Rancher    	| Mode    	| UI Ext 	| K3S  	| Notes                            	| Status 	|
+|--------------------	|------------	|---------	|--------	|------	|----------------------------------	|:------:	|
+| nightly (schedule) 	| 2.7 (p)    	| base    	| prime  	| 1.27 	|                                  	| [![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=schedule)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Aschedule) |
+|                    	| 2.8 (p)    	| base    	| prime  	| 1.28 	|                                  	|        	|
+|                    	| 2.9 (p)    	| base    	| prime  	| 1.30 	| install kubewarden from UI       	|        	|
+|                    	| 2.9 (p)    	| upgrade 	| prime  	| 1.30 	| upgrade path of kubewarden stack 	|        	|
+|                    	| 2.9 (p)    	| fleet   	| prime  	| 1.30 	| install kubewarden by fleet      	|        	|
+| release (tag)      	| ^          	| ^       	| github 	| ^    	| same matrix as nightly job       	| [![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=workflow_run)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Aworkflow_run) |
+| pull request       	| latest (c) 	| base    	| source 	| 1.30 	|                                  	| [![E2E](https://github.com/kubewarden/ui/actions/workflows/playwright.yml/badge.svg?event=pull_request)](https://github.com/kubewarden/ui/actions/workflows/playwright.yml?query=event%3Apull_request) |
+| manual             	| any        	| any      	| any    	| any  	|                                  	| |
+
 
 # kubewarden-end-to-end-tests
 

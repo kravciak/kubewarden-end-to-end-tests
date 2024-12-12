@@ -51,6 +51,9 @@ upgrade:
 uninstall:
 	./scripts/helmer.sh uninstall
 
+rancher:
+	./scripts/rancher.sh
+
 clean:
 	./scripts/cluster_k3d.sh delete
 

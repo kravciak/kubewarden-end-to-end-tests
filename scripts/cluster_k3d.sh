@@ -4,6 +4,15 @@ set -aeEuo pipefail
 
 . "$(dirname "$0")/../helpers/kubelib.sh"
 
+# Rancher K3S version requirements
+if [[ -v RANCHER && ! -v K3S ]]; then
+    case "$RANCHER"; in
+        *2.7*) K3S="1.27";;
+        *2.8*) K3S="1.28";;
+        *2.9*) K3S="1.30";;
+    esac
+fi
+
 # Optional variables
 K3S=${K3S:-$(k3d version -o json | jq -r '.k3s')}
 CLUSTER_NAME=${CLUSTER_NAME:-k3s-default}

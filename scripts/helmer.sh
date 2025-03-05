@@ -139,6 +139,8 @@ do_upgrade() {
         argsvar=${chart^^}_ARGS
         # Look into --reset-then-reuse-values helm flag as replacement
         helm get values kubewarden-$chart -n $NAMESPACE -o yaml > /tmp/chart-values.yaml
+        echo helm upgrade kubewarden-$chart -n $NAMESPACE $CHARTS_LOCATION/kubewarden-$chart --wait \
+            --version "${vMap[$chart]}" --values /tmp/chart-values.yaml ${!argsvar} "${@:2}"
         helm upgrade kubewarden-$chart -n $NAMESPACE $CHARTS_LOCATION/kubewarden-$chart --wait \
             --version "${vMap[$chart]}" --values /tmp/chart-values.yaml ${!argsvar} "${@:2}"
 

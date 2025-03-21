@@ -58,6 +58,9 @@ cluster:
 install: check
 	./scripts/helmer.sh install
 
+rancher:
+	./scripts/rancher.sh install
+
 upgrade:
 	./scripts/helmer.sh upgrade
 

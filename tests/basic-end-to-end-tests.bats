@@ -46,6 +46,8 @@ teardown_file() {
 
     # Policy should mutate pods
     kubectl run pause-user-group --image registry.k8s.io/pause
+    sleep 60
+    kubectl logs pause-user-group
     kubectl wait --for=condition=Ready pod pause-user-group
     kubectl get pods pause-user-group -o json | jq -e ".spec.containers[].securityContext.runAsUser==1000"
 

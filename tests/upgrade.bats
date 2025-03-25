@@ -35,9 +35,7 @@ function check_apiversion {
     check_apiversion clusteradmissionpolicies v1
 
     # Run privileged pod (should fail)
-    # kubefail_privileged run pod-privileged --image=rancher/pause:3.2 --privileged
-    # Workaround - https://suse.slack.com/archives/C02DBSK7HC1/p1661518752112929
-    run -1 kubectl run pod-privileged --image=rancher/pause:3.2 --privileged
+    kubefail_privileged run pod-privileged --image=rancher/pause:3.2 --privileged
 }
 
 @test "[CRD upgrade] Check old policy CRD version is translated to new" {

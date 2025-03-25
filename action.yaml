@@ -1,0 +1,89 @@
+name: "make-e2e"
+description: "Execute makefile target for end-to-end tests"
+branding:
+  icon: "package"
+  color: "blue"
+
+inputs:
+  make:
+    description: "Makefile target"
+    required: true
+
+  # Cluster parameters
+  K3D: # K3D=[v5.8.3]
+    description: "K3S version (short or long)"
+    required: false
+  K3S: # K3S=[1.30] - short|long version
+    description: "K3S version (short or long)"
+    required: false
+
+  # Helmer parameters
+  VERSION: # VERSION=[next|prev|v1.17.0-rc2|local] (app version)
+    description: "Helm chart version"
+    required: false
+  CHARTS_LOCATION: # CHARTS_LOCATION=[./dirname|reponame]
+    description: "Charts location (directory or repo)"
+    required: false
+  LATEST: # LATEST=[1] Use latest images
+    description: "Use the latest chart version"
+    required: false
+  CRDS_ARGS: # Extra arguments passed to helm
+    description: "CRDs-specific arguments"
+    required: false
+  DEFAULTS_ARGS:
+    description: "Defaults-specific arguments"
+    required: false
+  CONTROLLER_ARGS:
+    description: "Controller-specific arguments"
+    required: false
+
+  # Common parameters
+  MTLS:
+    description: "Enable or disable MTLS"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    # ==================================================================================================
+    # Install dependencies
+    - name: "Install k3d"
+      if: contains(inputs.make, 'cluster')
+      run: wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D }} sudo --preserve-env=TAG bash
+      shell: bash
+
+    - name: "Add repository"
+      if: contains(inputs.make, 'install') || contains(inputs.make, 'update')
+      run: helm repo add kubewarden https://charts.kubewarden.io
+      shell: bash
+
+    - name: "Install bats"
+      if: contains(inputs.make, '.bats') || contains(inputs.make, 'tests')
+      run: sudo npm install -g bats
+      shell: bash
+
+    - name: "Install kwctl"
+      if: contains(inputs.make, '.bats') || contains(inputs.make, 'tests')
+      uses: kravciak/github-actions/kwctl-installer@main
+      with:
+        KWCTL_VERSION: latest
+
+    # ==================================================================================================
+    # Execute make command
+    - name: "Execute make"
+      run: make ${{ inputs.make }}
+      shell: bash
+      env:
+        # Cluster parameters
+        K3D_REGISTRY_CONFIG: ${{ secrets.K3D_REGISTRY_CONFIG }}
+        K3S: ${{ inputs.K3S }}
+        # Helmer parameters
+        VERSION: ${{ inputs.VERSION }}
+        CHARTS_LOCATION: ${{ inputs.CHARTS_LOCATION }}
+        LATEST: ${{ inputs.LATEST }}
+        CRDS_ARGS: ${{ inputs.CRDS_ARGS }}
+        DEFAULTS_ARGS: ${{ inputs.DEFAULTS_ARGS }}
+        CONTROLLER_ARGS: ${{ inputs.CONTROLLER_ARGS }}
+        # Common parameters
+        MTLS: ${{ inputs.MTLS }}

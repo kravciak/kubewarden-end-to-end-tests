@@ -1,0 +1,199 @@
+name: End-to-end tests
+
+on:
+  workflow_call:
+    inputs:
+      ARCH:
+        description: "Runner architecture"
+        type: string
+        required: true
+
+      # Cluster parameters
+      K3D: # K3D=[v5.8.3]
+        description: "K3S version (short or long)"
+        type: string
+        required: false
+      K3S: # K3S=[1.30] - short|long version
+        description: "K3S version (short or long)"
+        type: string
+        required: false
+
+      # Helmer parameters
+      VERSION: # VERSION=[next|prev|v1.17.0-rc2|local] (app version)
+        description: "Helm chart version"
+        type: string
+        required: false
+      CHARTS_LOCATION: # CHARTS_LOCATION=[./dirname|reponame]
+        description: "Charts location (directory or repo)"
+        type: string
+        required: false
+      UPGRADE:
+        type: boolean
+        default: false
+      LATEST: # LATEST=[1] Use latest images
+        description: "Use the latest chart version"
+        type: string
+        required: false
+      CONTROLLER_ARGS: # Extra arguments passed to helm
+        description: "Controller-specific arguments"
+        type: string
+        required: false
+      DEFAULTS_ARGS:
+        description: "Defaults-specific arguments"
+        type: string
+        required: false
+
+      # Common parameters
+      MTLS:
+        description: "Enable or disable MTLS"
+        type: boolean
+        required: false
+      MAKE_CLUSTER:
+        type: string
+        # required: true
+      MAKE_INSTALL:
+        type: string
+        # required: true
+      MAKE_TESTS:
+        type: string
+        # required: true
+
+jobs:
+  e2e-tests:
+    runs-on: ${{ inputs.ARCH == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+
+    steps:
+      # ==================================================================================================
+      # Install dependencies
+
+      - name: "Install k3d"
+        # if: contains(inputs.make, 'cluster')
+        run: wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ inputs.K3D }} sudo --preserve-env=TAG bash
+        shell: bash
+
+      - name: "Add repository"
+        # if: contains(inputs.make, 'install') || contains(inputs.make, 'update')
+        run: helm repo add kubewarden https://charts.kubewarden.io
+        shell: bash
+
+      - name: "Install bats"
+        # if: contains(inputs.make, '.bats') || contains(inputs.make, 'tests')
+        run: sudo npm install -g bats
+        shell: bash
+
+      - name: "Install kwctl"
+        # if: contains(inputs.make, '.bats') || contains(inputs.make, 'tests')
+        uses: kravciak/github-actions/kwctl-installer@main
+        with:
+          KWCTL_VERSION: latest
+
+      # ==================================================================================================
+      # Execute make targets
+
+      - name: "Create k8s cluster"
+        run: make cluster K3D_REGISTRY_CONFIG="${{ secrets.K3D_REGISTRY_CONFIG }}"
+        env:
+          K3S: ${{ inputs.K3S == 'k3d' && '' || inputs.K3S }}
+          MTLS: ${{ inputs.MTLS }}
+
+      - name: Install previous kubewarden
+        if: inputs.UPGRADE
+        run: make install VERSION=prev CHARTS_LOCATION=kubewarden
+        env:
+          MTLS: ${{ github.event_name == 'schedule' && '' || '' }} # TODO: Enable after prev supports mTLS (kw >= 1.24-alpha)
+
+      - name: ${{ inputs.UPGRADE && 'Upgrade' || 'Install' }} kubewarden
+        run: |
+          # Additional environment setup
+          # [[ "${{ matrix.version }}" == 'local' ]] && CHARTS_LOCATION=../charts || CHARTS_LOCATION=kubewarden
+          # [[ "${{ github.event_name }}" == 'schedule' && "${{ matrix.version }}" == 'local' ]] && LATEST=true
+          # export CHARTS_LOCATION LATEST
+
+          # Install / Upgrade kubewarden (with mTLS)
+          # 1st install job enables mTLS during installation, 2nd will enable it in mTLS test
+          [[ "${{ github.event_name }}-${{ matrix.mode }}-${{ matrix.version }}" == "schedule-install-next" ]] && export MTLS=1
+          # TODO: Upgrade with mTLS, remove after prev stable supports mTLS (kw >= 1.24-alpha)
+          [[ "${{ github.event_name }}-${{ matrix.mode }}" == "schedule-upgrade" ]] && export MTLS=1
+
+          make ${{ inputs.UPGRADE && 'upgrade' || 'install' }}
+          ./scripts/helmer.sh debug
+        env:
+          CHARTS_LOCATION: ${{ inputs.CHARTS_LOCATION }}
+          LATEST: ${{ inputs.LATEST }}
+
+        env:
+          VERSION: ${{ inputs.VERSION }}
+          LATEST: ${{ inputs.LATEST }}
+          DEFAULTS_ARGS: ${{ inputs.DEFAULTS_ARGS }}
+          CONTROLLER_ARGS: ${{ inputs.CONTROLLER_ARGS }}
+
+      - name: Run tests
+        working-directory: ./e2e-tests
+        run: |
+          # Additional environment setup
+          [[ "${{ matrix.version }}" == 'local' ]] && CHARTS_LOCATION=../charts || CHARTS_LOCATION=kubewarden
+          [[ "${{ github.event_name }}" == 'schedule' && "${{ matrix.version }}" == 'local' ]] && LATEST=true
+          export CHARTS_LOCATION LATEST
+
+          # Install / Upgrade kubewarden (with mTLS)
+          # 1st install job enables mTLS during installation, 2nd will enable it in mTLS test
+          [[ "${{ github.event_name }}-${{ matrix.mode }}-${{ matrix.version }}" == "schedule-install-next" ]] && export MTLS=1
+          # TODO: Upgrade with mTLS, remove after prev stable supports mTLS (kw >= 1.24-alpha)
+          [[ "${{ github.event_name }}-${{ matrix.mode }}" == "schedule-upgrade" ]] && export MTLS=1
+          make ${{ matrix.mode }}
+          ./scripts/helmer.sh debug
+
+          # Run tests (run mTLS test on nightly jobs)
+          [[ "${{ github.event_name }}" == "schedule" ]] && export MTLS=1
+          make tests audit-scanner-installation.bats
+          make uninstall
+        env:
+          CLUSTER_NAME: ${{ env.K3D_CLUSTER_NAME }}
+          VERSION: ${{ matrix.version }}
+          LATEST: ${{ inputs.LATEST }}
+          DEFAULTS_ARGS: ${{ inputs.DEFAULTS_ARGS }}
+          CONTROLLER_ARGS: ${{ inputs.CONTROLLER_ARGS }}
+
+      - name: Remove k3d cluster
+        if: always()
+        run: make --directory e2e-tests clean
+
+
+# cluster_k3d.sh:
+#   MTLS=1
+#   K3S=[1.30] - short|long version
+#   CLUSTER_NAME=[k3d-default]
+
+# helmer.sh:
+#   VERSION=[next|prev|v1.17.0-rc2|local] (app version)
+#   REPO_NAME=[kubewarden]
+#   CHARTS_LOCATION=[./dirname|reponame]
+#   LATEST=[1]
+#   CRDS_ARGS, DEFAULTS_ARGS, CONTROLLER_ARGS
+
+      - name: Install kubewarden and run tests
+      working-directory: ./e2e-tests
+      run: |
+        # Additional environment setup
+        [[ "${{ matrix.version }}" == 'local' ]] && CHARTS_LOCATION=../charts || CHARTS_LOCATION=kubewarden
+        [[ "${{ github.event_name }}" == 'schedule' && "${{ matrix.version }}" == 'local' ]] && LATEST=true
+        export CHARTS_LOCATION LATEST
+
+        # Install / Upgrade kubewarden (with mTLS)
+        # 1st install job enables mTLS during installation, 2nd will enable it in mTLS test
+        [[ "${{ github.event_name }}-${{ matrix.mode }}-${{ matrix.version }}" == "schedule-install-next" ]] && export MTLS=1
+        # TODO: Upgrade with mTLS, remove after prev stable supports mTLS (kw >= 1.24-alpha)
+        [[ "${{ github.event_name }}-${{ matrix.mode }}" == "schedule-upgrade" ]] && export MTLS=1
+        make ${{ matrix.mode }}
+        ./scripts/helmer.sh debug
+
+        # Run tests (run mTLS test on nightly jobs)
+        [[ "${{ github.event_name }}" == "schedule" ]] && export MTLS=1
+        make tests audit-scanner-installation.bats
+        make uninstall
+      env:
+        CLUSTER_NAME: ${{ env.K3D_CLUSTER_NAME }}
+        VERSION: ${{ matrix.version }}
+        LATEST: ${{ inputs.LATEST }}
+        DEFAULTS_ARGS: ${{ inputs.DEFAULTS_ARGS }}
+        CONTROLLER_ARGS: ${{ inputs.CONTROLLER_ARGS }}

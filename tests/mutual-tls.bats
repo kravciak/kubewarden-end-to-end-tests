@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 # https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
 
+# mTLS has to be enabled on the cluster, Use MTLS=1 env to enable this test
+
 setup() {
     load ../helpers/helpers.sh
     wait_pods
@@ -13,9 +15,6 @@ teardown_file() {
     kubectl delete ps mtls-pserver --ignore-not-found
     helmer reset kubewarden-controller
 }
-
-# mTLS has to be enabled on the cluster, use MTLS=1 to indicate that
-[[ "${MTLS:-}" =~ ^(false|0)?$ ]] && skip "Mutual TLS is disabled on cluster"
 
 function curlpod { kubectl exec curlpod -- curl -k --no-progress-meter $@; }
 
@@ -32,6 +31,8 @@ function check_service_mtls {
 }
 
 @test "[Mutual TLS] Prepare resources" {
+    [[ "${MTLS:-}" =~ ^(false|0)?$ ]] && skip "Mutual TLS is disabled on cluster"
+
     # Create secondary Policy Server
     create_policyserver mtls-pserver
 
@@ -42,6 +43,8 @@ function check_service_mtls {
 }
 
 @test "[Mutual TLS] Enable mTLS" {
+    [[ "${MTLS:-}" =~ ^(false|0)?$ ]] && skip "Mutual TLS is disabled on cluster"
+
     helm get values -n $NAMESPACE kubewarden-controller -o json | jq -e '.mTLS.enable == true' && skip "mTLS was enabled during installation"
 
     kubectl get cm -n $NAMESPACE mtlscm &>/dev/null || kubectl create cm -n $NAMESPACE mtlscm --from-file="client-ca.crt=$RESOURCES_DIR/mtls/rootCA.crt"
@@ -49,6 +52,8 @@ function check_service_mtls {
 }
 
 @test "[Mutual TLS] Check mTLS" {
+    [[ "${MTLS:-}" =~ ^(false|0)?$ ]] && skip "Mutual TLS is disabled on cluster"
+
     # Check mTLS is enabled in kubernetes
     kubectl get nodes -l node-role.kubernetes.io/control-plane -o yaml | grep -F "admission-control-config-file"
     # Check default PS logs
@@ -65,6 +70,8 @@ function check_service_mtls {
 }
 
 @test "[Mutual TLS] Disable mTLS" {
+    [[ "${MTLS:-}" =~ ^(false|0)?$ ]] && skip "Mutual TLS is disabled on cluster"
+
     helmer set kubewarden-controller --set mTLS.enable=false
 
     # Talk to services without a certificate

@@ -11,14 +11,14 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        repository: kravciak/end-to-end-tests
-        ref: makeaction
-        path: ./kwe2e
+    # - name: Checkout repository
+    #   uses: actions/checkout@v3
+    #   with:
+    #     repository: kravciak/end-to-end-tests
+    #     ref: makeaction
+    #     path: ./kwe2e
 
     - name: Run Makefile target
-      run: make ${{ inputs.make }}
+      run: echo QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ # make ${{ inputs.make }}
       working-directory: ./kwe2e
       # shell: bash

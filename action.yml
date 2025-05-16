@@ -13,6 +13,7 @@ runs:
   steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      ref: makeaction
 
     - name: Run Makefile target
       run: make ${{ inputs.make }}

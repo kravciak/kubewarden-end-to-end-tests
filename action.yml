@@ -14,6 +14,7 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
+        repository: kravciak/end-to-end-tests
         ref: makeaction
         path: ./kwe2e
 

@@ -1,0 +1,23 @@
+name: "Run Makefile Target"
+description: "A composite action to run a specified Makefile target"
+
+inputs:
+  make:
+    description: "The Makefile target to run"
+    required: true
+    default: "check"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: kravciak/kubewarden-end-to-end-tests
+        ref: makeaction
+        path: ./composite-e2e
+
+    - name: Run Makefile target
+      run: make ${{ inputs.make }}
+      working-directory: ./composite-e2e
+      shell: bash

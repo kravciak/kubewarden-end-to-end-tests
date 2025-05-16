@@ -1,0 +1,23 @@
+name: "Run Makefile Target"
+description: "Action triggers Makefile target"
+
+inputs:
+  make:
+    description: "The Makefile target to run"
+    required: true
+    default: "check"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout action repository
+      uses: actions/checkout@v4
+      with:
+        repository: kravciak/kubewarden-end-to-end-tests
+        ref: makeaction # delme before merging
+        path: ./action-make
+
+    - name: Run Makefile target
+      run: make ${{ inputs.make }}
+      working-directory: ./action-make
+      shell: bash

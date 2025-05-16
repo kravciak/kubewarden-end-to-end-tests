@@ -15,7 +15,9 @@ runs:
       uses: actions/checkout@v3
       with:
         ref: makeaction
+        path: ./kwe2e
 
     - name: Run Makefile target
       run: make ${{ inputs.make }}
+      working-directory: ./kwe2e
       # shell: bash

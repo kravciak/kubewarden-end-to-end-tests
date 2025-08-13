@@ -1,6 +1,7 @@
 [![Kubewarden Infra Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-infra.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#infra-scope)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 
+s
 ## [Charts test matrix](https://github.com/kubewarden/helm-charts/blob/main/.github/workflows/e2e-tests.yml)
 
 | Trigger            	| Charts          	| K3S 	| Notes               	| Status 	|

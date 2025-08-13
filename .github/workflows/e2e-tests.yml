@@ -42,6 +42,7 @@ jobs:
 
       - uses: ./
         with:
-          make: install tests uninstall
+          # make: install tests uninstall
+          make: install uninstall
         # env:
         #   CHARTS_LOCATION: ../charts

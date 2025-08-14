@@ -2,6 +2,7 @@
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 
 ## [Charts test matrix](https://github.com/kubewarden/helm-charts/blob/main/.github/workflows/e2e-tests.yml)
+c
 
 | Trigger            	| Charts          	| K3S 	| Notes               	| Status 	|
 |--------------------	|-----------------	|-----	|----------------------	| :--------: |

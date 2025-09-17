@@ -102,3 +102,4 @@ workflow](https://github.com/kubewarden/helm-charts/blob/main/.github/workflows/
 ~ COSIGN_PASSWORD=kubewarden cosign sign --key cosign1.key -a env=prod -a stable=true ghcr.io/kubewarden/tests/pod-privileged:v0.2.1
 ~ COSIGN_PASSWORD=kubewarden cosign sign --key cosign2.key -a env=prod ghcr.io/kubewarden/tests/pod-privileged:v0.2.1
 ```
+fsdij

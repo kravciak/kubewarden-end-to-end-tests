@@ -25,9 +25,6 @@ setup_helper() {
     bats::on_failure() {
         # shellcheck disable=SC2317
         echo "$BATS_TEST_FILENAME" > "${BATS_RUN_TMPDIR}/.skip"
-        # Collect logs (here or teardown?)
-        # kubectl logs -n kubewarden -l app.kubernetes.io/component=controller
-        # kubectl logs -n kubewarden -l app.kubernetes.io/component=policy-server
     }
 
     # Wait for kubewarden pods unless --no-wait tag is set
@@ -39,6 +36,13 @@ teardown_helper() {
     # Conditional skip (based on .skip file & KEEP var)
     if [[ -f "$BATS_RUN_TMPDIR/.skip" ]]; then
         if [[ "$BATS_TEST_FILENAME" == "$(< "$BATS_RUN_TMPDIR/.skip")" ]]; then
+            # Collect logs before teardown
+            kubectl describe pods -n kubewarden
+            kubectl logs -n kubewarden -l app.kubernetes.io/component=controller --all-containers
+            kubectl logs -n kubewarden -l app.kubernetes.io/component=policy-server --all-containers
+            kubectl describe pods -n kubewarden >&3
+            kubectl logs -n kubewarden -l app.kubernetes.io/component=controller --all-containers >&3
+            kubectl logs -n kubewarden -l app.kubernetes.io/component=policy-server --all-containers >&3
             [[ -n "${KEEP:-}" ]] && skip "skip teardown of failed test"
         else
             skip "skip teardown of remaining tests"

@@ -34,14 +34,38 @@ if [ "${1:-}" == 'create' ]; then
         generate_certs "$MTLS_DIR" mtls.kubewarden.io
     fi
 
+    # DOCKER_GW=$(docker network inspect bridge | jq -re '.[].IPAM.Config[].Gateway')
+    # --host-alias "$DOCKER_GW:host.docker.internal" \
+
+    # Detect pull-through cache for GHCR
+    # k3d registry create ghcr.io --proxy-remote-url https://ghcr.io -v ~/.cache/registry/ghcr-io:/var/lib/registry --delete-enabled --no-help
+    if k3d registry list k3d-ghcr.io --no-headers 2>/dev/null; then
+        # Use cache in the cluster
+        PTC_GHCR="k3d-ghcr.io"
+        # docker exec $PTC_GHCR sh -c 'find /var/lib/registry/docker/registry/v2/repositories/kubewarden -type d -path "*/_manifests/tags/latest" -exec rm -r {} +'
+        # find ~/.cache/registry/ghcr-io/docker/registry/v2/repositories/kubewarden \
+        #     -type d -path "*/_manifests/tags/latest"
+        #     -exec rm -r {} +
+
+        # Clean latest tags from cache
+        # docker exec $PTC_GHCR sh -c 'find /var/lib/registry/docker/registry/v2/repositories/kubewarden -type f -path "*/_manifests/tags/latest/current/link" -delete'
+        # docker exec $PTC_GHCR sh -c 'find /var/lib/registry/docker/registry/v2/repositories/kubewarden \
+
+        # docker exec $PTC_GHCR sh -c 'find /var/lib/registry \
+        #     -type f -path "*/_manifests/tags/latest/current/link" \
+        #     -exec sh -c "echo {}; cat {}; echo" \;'
+        # docker container restart $PTC_GHCR
+
+            # -print -exec sh -c "cat {}; echo" \; -delete'
+    fi
+
     # /dev/mapper: https://k3d.io/v5.7.4/faq/faq/#issues-with-btrfs
-    # registry-config: https://k3d.io/v5.8.3/faq/faq/#dockerhub-pull-rate-limit
     k3d cluster create "$CLUSTER_NAME" --wait \
+        --config config/k3d-config-cache.yaml \
         --image "rancher/k3s:$K3S" \
         -s "$MASTER_COUNT" -a "$WORKER_COUNT" \
-        --registry-create "k3d-$CLUSTER_NAME-registry" \
-        --registry-config <(echo "${K3D_REGISTRY_CONFIG:-}") \
-        -v /dev/mapper:/dev/mapper@all \
+        -v "/dev/mapper:/dev/mapper@all:*" \
+        ${PTC_GHCR:+--registry-use $PTC_GHCR} \
         ${MTLS:+--k3s-arg '--kube-apiserver-arg=admission-control-config-file=/etc/mtls/admission.yaml@server:*'} \
         ${MTLS:+--volume "$MTLS_DIR:/etc/mtls@server:*"} \
         "${@:2}"

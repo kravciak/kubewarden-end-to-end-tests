@@ -34,9 +34,6 @@ if [ "${1:-}" == 'create' ]; then
         generate_certs "$MTLS_DIR" mtls.kubewarden.io
     fi
 
-    # DOCKER_GW=$(docker network inspect bridge | jq -re '.[].IPAM.Config[].Gateway')
-    # --host-alias "$DOCKER_GW:host.docker.internal" \
-
     # Detect pull-through cache for GHCR
     # k3d registry create ghcr.io --proxy-remote-url https://ghcr.io -v ~/.cache/registry/ghcr-io:/var/lib/registry --delete-enabled --no-help
     if k3d registry list k3d-ghcr.io --no-headers 2>/dev/null; then

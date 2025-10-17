@@ -1,22 +1,12 @@
 apiVersion: k3d.io/v1alpha5
 kind: Simple
 
-# Disable default registry endpoint to avoid pulling images from Docker Hub directly
-# --k3s-arg "--disable-default-registry-endpoint@all:*"
-# options:
-#   k3s:
-#     extraArgs:
-#       - arg: "--disable-default-registry-endpoint"
-#         nodeFilters:
-#           - all:*
-
 # Define local registry caches
 registries:
   # use:
     # - k3d-docker-io #:5000
     # - k3d-ghcr-io   #:5001
 
-  # https://github.com/k3d-io/k3d/issues/1548
   config: |
     mirrors:
       # Pull-through cache for Docker Hub
@@ -30,6 +20,9 @@ registries:
         endpoint:
           - http://host.docker.internal:5002
 
+# k3d cluster create params:
+# DOCKER_GW=$(docker network inspect bridge | jq -re '.[].IPAM.Config[].Gateway')
+# --host-alias "$DOCKER_GW:host.docker.internal" \
 
 # https://github.com/k3d-io/k3d/issues/1548
 # k3d registry create docker.io --port 5001 --proxy-remote-url https://registry-1.docker.io --volume ~/.cache/registry/docker-io:/var/lib/registry

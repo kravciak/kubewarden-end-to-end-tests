@@ -1,15 +1,16 @@
-# Configure SUSE CA to allow pulls from registry.suse.de 
+# Configure SUSE CA to allow pulls from registry.suse.de
+# https://k3d.io/v5.8.3/usage/registries/#secure-registries
+
 apiVersion: k3d.io/v1alpha5
 kind: Simple
 
-# https://k3d.io/v5.8.3/usage/registries/#secure-registries
 volumes:
+  # SUSE_Trust_Root from ca-certificates-suse package
   # --volume "/usr/share/pki/trust/anchors/SUSE_Trust_Root.crt.pem:/etc/ssl/certs/SUSE_Trust_Root.crt.pem"
   - volume: $PWD/SUSE_Trust_Root.crt.pem:/etc/ssl/certs/SUSE_Trust_Root.crt.pem
     nodeFilters:
       - all:*
 
-# Define local registry caches
 registries:
   config: |
     mirrors:
@@ -21,4 +22,3 @@ registries:
         tls:
           # Alternative: insecure_skip_verify: true
           ca_file: /etc/ssl/certs/SUSE_Trust_Root.crt.pem
-

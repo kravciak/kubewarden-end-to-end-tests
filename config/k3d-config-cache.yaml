@@ -21,6 +21,12 @@ kind: Simple
 #         nodeFilters:
 #           - all:*
 
+# volumes:
+#   # https://k3d.io/v5.7.4/faq/faq/#issues-with-btrfs
+#   - volume: /dev/mapper:/dev/mapper
+#     nodeFilters:
+#       - all:*
+
 registries:
   create:
     name: k3d-docker.io
@@ -38,13 +44,11 @@ registries:
       "docker.io":
         endpoint:
           - http://k3d-docker.io:5000
-          # - http://host.docker.internal:5001
 
       # Pull-through cache for GHCR
       "ghcr.io":
         endpoint:
           - http://k3d-ghcr.io:5000
-          # - http://host.docker.internal:5002
 
 # Official
 # k3d registry create docker.io --proxy-remote-url https://registry-1.docker.io -v /var/cache/registry/docker-io:/var/lib/registry

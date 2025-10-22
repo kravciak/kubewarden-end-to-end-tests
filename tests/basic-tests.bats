@@ -109,3 +109,26 @@ helm_get() {
 
     kubectl delete ps e2e-tests
 }
+
+@test "$(tfile) Cosign" {
+    # Images
+    # policy-server kubewarden-controller audit-scanner
+
+    cosign verify ghcr.io/kubewarden/policy-server:v1.29.0 \
+          --certificate-identity-regexp 'https://github.com/kubewarden/*' \
+          --certificate-oidc-issuer https://token.actions.githubusercontent.com
+    slsactl verify ghcr.io/kubewarden/policy-server:v1.29.0
+
+    # Helm charts
+    cosign verify ghcr.io/kubewarden/charts/kubewarden-defaults:1.5.4 \
+        --certificate-identity-regexp 'https://github.com/kubewarden/*' \
+        --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+    # kwctl
+    gh attestation verify kwctl-linux-x86_64 --repo kubewarden/kwctl
+
+    # Policies
+    cosign verify ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.5 \
+        --certificate-identity-regexp 'https://github.com/kubewarden/*' \
+        --certificate-oidc-issuer https://token.actions.githubusercontent.com
+}

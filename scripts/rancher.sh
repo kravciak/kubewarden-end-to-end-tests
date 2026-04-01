@@ -65,7 +65,9 @@ helm_add_repositories() {
     ar e2e-rancher-head-211 https://charts.optimus.rancher.io/server-charts/release-2.11
     ar e2e-rancher-head-212 https://charts.optimus.rancher.io/server-charts/release-2.12
     ar e2e-rancher-head-213 https://charts.optimus.rancher.io/server-charts/release-2.13
-    helm repo update e2e-rancher-head-210 e2e-rancher-head-211 e2e-rancher-head-212 e2e-rancher-head-213 > /dev/null
+    ar e2e-rancher-head-214 https://charts.optimus.rancher.io/server-charts/release-2.14
+    ar e2e-rancher-head-215 https://charts.optimus.rancher.io/server-charts/release-2.15
+    helm repo update e2e-rancher-head-210 e2e-rancher-head-211 e2e-rancher-head-212 e2e-rancher-head-213 e2e-rancher-head-214 e2e-rancher-head-215 > /dev/null
 }
 
 # Find repository & highest version based on constraints

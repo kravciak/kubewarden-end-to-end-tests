@@ -82,11 +82,12 @@ K3S_INSTALL_SCRIPT_SHA256="8598e002e61d658fed7b7542fc6d2c66d8da6eae69e088830105d
 
 # Install hauler v1.4.2 via install script
 HAULER_INSTALL_SCRIPT_SHA256="8089730ce8384dc0d520c67f539ceaaba1243078b2ceacd0deb44fea23628466"
-curl -sSfL "https://raw.githubusercontent.com/hauler-dev/hauler/v1.4.2/install.sh" -o /tmp/hauler-install.sh
-echo "${HAULER_INSTALL_SCRIPT_SHA256}  /tmp/hauler-install.sh" | sha256sum -c
-HAULER_VERSION=1.4.2 HAULER_INSTALL_DIR=$HOME bash /tmp/hauler-install.sh
+HAULER_INSTALL_SCRIPT="$(mktemp /tmp/hauler-install.XXXXXX.sh)"
+trap 'rm -f "${HAULER_INSTALL_SCRIPT}"' EXIT
+curl -sSfL "https://raw.githubusercontent.com/hauler-dev/hauler/v1.4.2/install.sh" -o "${HAULER_INSTALL_SCRIPT}" || error "Failed to download hauler install script"
+echo "${HAULER_INSTALL_SCRIPT_SHA256}  ${HAULER_INSTALL_SCRIPT}" | sha256sum -c || error "Hauler install script checksum verification failed"
+HAULER_VERSION=1.4.2 HAULER_INSTALL_DIR=$HOME bash "${HAULER_INSTALL_SCRIPT}" || error "Failed to run hauler install script"
 sudo mv $HOME/hauler ${HAULER_BIN}
-rm /tmp/hauler-install.sh
 
 # Install packages
 sudo zypper --no-refresh -n in skopeo yq
@@ -101,12 +102,12 @@ sudo sh -c "echo '192.168.122.102 ${REPO_SERVER%:*}' >> /etc/hosts"
 # Download k3s binaries and airgap images for the requested K3S_VERSION
 K3S_URL=https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION
 for i in k3s-airgap-images-amd64.tar.zst k3s; do
-  curl -sL ${K3S_URL}/${i} -o ${OPT_RANCHER}/k3s/${i}
+  curl -sSfL ${K3S_URL}/${i} -o ${OPT_RANCHER}/k3s/${i}
 done
 
 # Download the install.sh pinned to the fixed v1.35.3+k3s1 commit and verify its checksum
 curl -sfL "https://raw.githubusercontent.com/k3s-io/k3s/${K3S_INSTALL_SCRIPT_COMMIT}/install.sh" -o ${OPT_RANCHER}/k3s/install.sh
-echo "${K3S_INSTALL_SCRIPT_SHA256}  ${OPT_RANCHER}/k3s/install.sh" | sha256sum -c
+echo "${K3S_INSTALL_SCRIPT_SHA256}  ${OPT_RANCHER}/k3s/install.sh" | sha256sum -c || error "Checksum verification failed for ${OPT_RANCHER}/k3s/install.sh"
 
 # Get the airgap deploy script
 cp ${DEPLOY_AIRGAP_SCRIPT} ${UPGRADE_AIRGAP_SCRIPT} ${OPT_RANCHER}/k3s

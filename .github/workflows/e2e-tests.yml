@@ -24,10 +24,19 @@ jobs:
         with:
           KWCTL_VERSION: latest
 
-      - name: Dependencies
+      - name: Download K3d install script
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: k3d-io/k3d
+          sparse-checkout: install.sh
+          path: tools
+          ref: "201b614ea6798f0ee9e75c63360eef891b36bb19" # v5.8.3
+          sparse-checkout-cone-mode: false
+
+      - name: Install dependencies
         run: |
           sudo npm install -g bats
-          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          cat tools/install.sh | bash
           helm repo add kubewarden https://charts.kubewarden.io
 
       - name: Checkout tested code

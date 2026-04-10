@@ -4,8 +4,7 @@ ROOT_DIR:=$(realpath $(PWD)/..)
 GINKGO_TIMEOUT?=3600
 
 deps: 
-	@go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
-	@go install -mod=mod github.com/onsi/gomega
+	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.28.1
 	@go mod tidy
 
 # E2E tests

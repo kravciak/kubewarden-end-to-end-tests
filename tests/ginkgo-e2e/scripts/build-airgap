@@ -63,6 +63,12 @@ DEPLOY_AIRGAP_SCRIPT=$(realpath ../scripts/deploy-airgap)
 UPGRADE_AIRGAP_SCRIPT=$(realpath ../scripts/upgrade-airgap)
 K3S_VERSION=$1
 TEST_TYPE=$2
+
+# Validate required arguments
+if [[ -z "${K3S_VERSION}" ]] || [[ -z "${TEST_TYPE}" ]]; then
+  error "Usage: build-airgap <K3S_VERSION> <TEST_TYPE>\n  K3S_VERSION: e.g. v1.26.4+k3s1\n  TEST_TYPE:   install|upgrade"
+fi
+
 KUBEWARDEN_VERSION=latest
 KUBEWARDEN_REPO=https://charts.kubewarden.io
 HAULER_BIN=/usr/local/bin/hauler
@@ -72,8 +78,37 @@ HAULER_MANIFEST_PREV="${HAULER_PATH}/hauler_manifest_prev.yaml"
 OPT_RANCHER="${HOME}/airgap_rancher"
 REPO_SERVER="rancher-manager.test:5000"
 
-# Install hauler
-curl -sfL https://get.hauler.dev | HAULER_INSTALL_DIR=$HOME bash
+# The k3s install.sh is a generic installer: the version it installs is controlled at
+# runtime via the INSTALL_K3S_VERSION environment variable. We therefore always use the
+# install.sh pinned to v1.35.3+k3s1 regardless of K3S_VERSION, avoiding the need to
+# maintain per-version checksums. K3S_VERSION still governs which k3s binary and airgap
+# images are downloaded below.
+K3S_INSTALL_SCRIPT_COMMIT="be38e8843c3498607d41ce583bdbb0ef1e63bba6"
+K3S_INSTALL_SCRIPT_SHA256="8598e002e61d658fed7b7542fc6d2c66d8da6eae69e088830105d2ee1ffb6d91"
+
+# Version for which the default checksums below are valid.
+K3S_CHECKSUMS_VERSION="v1.35.3+k3s1"
+
+# K3S_BINARY_SHA256 and K3S_AIRGAP_IMAGES_SHA256 can be overridden via environment variables.
+# When using a K3S_VERSION other than K3S_CHECKSUMS_VERSION, you MUST set both:
+#   K3S_BINARY_SHA256=<sha256 of k3s binary for that version>
+#   K3S_AIRGAP_IMAGES_SHA256=<sha256 of k3s-airgap-images-amd64.tar.zst for that version>
+# Checksums can be obtained from the release page:
+#   https://github.com/k3s-io/k3s/releases/download/<version>/sha256sum-amd64.txt
+if [[ "${K3S_VERSION}" != "${K3S_CHECKSUMS_VERSION}" ]]; then
+  [[ -n "${K3S_BINARY_SHA256:-}" ]] || error "K3S_BINARY_SHA256 must be set to a non-empty value when K3S_VERSION (${K3S_VERSION}) differs from the default (${K3S_CHECKSUMS_VERSION})"
+  [[ -n "${K3S_AIRGAP_IMAGES_SHA256:-}" ]] || error "K3S_AIRGAP_IMAGES_SHA256 must be set to a non-empty value when K3S_VERSION (${K3S_VERSION}) differs from the default (${K3S_CHECKSUMS_VERSION})"
+fi
+K3S_BINARY_SHA256="${K3S_BINARY_SHA256:-e8661b03d0004e5792da6c2aae7f05de4c54711ee4228d0cce28e02c404626a6}"
+K3S_AIRGAP_IMAGES_SHA256="${K3S_AIRGAP_IMAGES_SHA256:-1f929f52845623ba336de4af9b49285f6e5a4c7bbc20cab006d374fb9b75bf37}"
+
+# Install hauler v1.4.2 via install script
+HAULER_INSTALL_SCRIPT_SHA256="8089730ce8384dc0d520c67f539ceaaba1243078b2ceacd0deb44fea23628466"
+HAULER_INSTALL_SCRIPT="$(mktemp /tmp/hauler-install.XXXXXX.sh)"
+trap 'rm -f "${HAULER_INSTALL_SCRIPT}"' EXIT
+curl -sSfL "https://raw.githubusercontent.com/hauler-dev/hauler/v1.4.2/install.sh" -o "${HAULER_INSTALL_SCRIPT}" || error "Failed to download hauler install script"
+echo "${HAULER_INSTALL_SCRIPT_SHA256}  ${HAULER_INSTALL_SCRIPT}" | sha256sum -c || error "Hauler install script checksum verification failed"
+HAULER_VERSION=1.4.2 HAULER_INSTALL_DIR=$HOME bash "${HAULER_INSTALL_SCRIPT}" || error "Failed to run hauler install script"
 sudo mv $HOME/hauler ${HAULER_BIN}
 
 # Install packages
@@ -86,17 +121,19 @@ cd ${OPT_RANCHER}
 # Add rancher manager in /etc/hosts
 sudo sh -c "echo '192.168.122.102 ${REPO_SERVER%:*}' >> /etc/hosts"
 
-# Download k3s
+# Download k3s binaries and airgap images for the requested K3S_VERSION
 K3S_URL=https://github.com/k3s-io/k3s/releases/download/$K3S_VERSION
-for i in k3s-airgap-images-amd64.tar.zst k3s; do
-  curl -sL ${K3S_URL}/${i} -o ${OPT_RANCHER}/k3s/${i}
+curl -sSfL ${K3S_URL}/k3s-airgap-images-amd64.tar.zst -o ${OPT_RANCHER}/k3s/k3s-airgap-images-amd64.tar.zst || error "Failed to download k3s-airgap-images-amd64.tar.zst"
+echo "${K3S_AIRGAP_IMAGES_SHA256}  ${OPT_RANCHER}/k3s/k3s-airgap-images-amd64.tar.zst" | sha256sum -c || error "Checksum verification failed for k3s-airgap-images-amd64.tar.zst"
+curl -sSfL ${K3S_URL}/k3s -o ${OPT_RANCHER}/k3s/k3s || error "Failed to download k3s"
+echo "${K3S_BINARY_SHA256}  ${OPT_RANCHER}/k3s/k3s" | sha256sum -c || error "Checksum verification failed for k3s"
 
-  # Get the install script
-  curl -sfL https://get.k3s.io -o ${OPT_RANCHER}/k3s/install.sh
+# Download the install.sh pinned to the fixed v1.35.3+k3s1 commit and verify its checksum
+curl -sSfL "https://raw.githubusercontent.com/k3s-io/k3s/${K3S_INSTALL_SCRIPT_COMMIT}/install.sh" -o ${OPT_RANCHER}/k3s/install.sh || error "Failed to download k3s install.sh"
+echo "${K3S_INSTALL_SCRIPT_SHA256}  ${OPT_RANCHER}/k3s/install.sh" | sha256sum -c || error "Checksum verification failed for ${OPT_RANCHER}/k3s/install.sh"
 
-  # Get the airgap deploy script
-  cp ${DEPLOY_AIRGAP_SCRIPT} ${UPGRADE_AIRGAP_SCRIPT} ${OPT_RANCHER}/k3s
-done
+# Get the airgap deploy script
+cp ${DEPLOY_AIRGAP_SCRIPT} ${UPGRADE_AIRGAP_SCRIPT} ${OPT_RANCHER}/k3s
 
 # Add k3s artifacts to hauler
 ${HAULER_BIN} store add file ${OPT_RANCHER}/k3s

@@ -73,6 +73,13 @@ function kubefail_policy_group {
 # Prepend policies with RESOURCE dir if file doesn't contain '/'
 policypath() { [[ "$1" == */* ]] && echo "$1" || echo "$RESOURCES_DIR/policies/$1"; }
 
+# scaffold_policy cap pod-privileged:v1.0.10
+scaffold_policy() {
+    local kind
+    [ "$1" = "cap" ] && kind=ClusterAdmissionPolicy || kind=AdmissionPolicy
+    kwctl scaffold manifest -t "$kind" "registry://ghcr.io/kubewarden/policies/$2"
+}
+
 # Deploy from pipe or resources dir (if parameter doesn't contain '/')
 # Detect policy kind and wait for it to be active and uniquely reachable
 # Works only with default policy server

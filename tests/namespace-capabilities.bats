@@ -1,0 +1,131 @@
+#!/usr/bin/env bats
+
+setup() {
+    setup_helper
+}
+teardown_file() {
+    teardown_helper
+}
+
+
+@test "$(tfile) Version checks" {
+
+    # enable recommended policies and create extra AP (check this at default PS checks, would be faster)
+    scaffold_policy cap pod-privileged:latest | kubectl apply -f -
+    scaffold_policy ap pod-privileged:latest | kubectl apply -f -
+
+    # create secondary PS with ap,cap
+    create_policyserver pstwo
+    scaffold_policy cap pod-privileged:latest | yq '
+        .spec.policyServer = "pstwo"' | kubectl apply -f -
+    scaffold_policy cap pod-privileged:latest | yq '
+        .spec.policyServer = "pstwo"' | kubectl apply -f -
+
+    # check defaults (does not block anything)
+
+    # set hostCapabilitiese to block on default & secondary PS
+
+    # check it blocks
+
+    # revert, check it does not block
+
+    # --set recommendedPolicies.enabled=true --set policyServer.namespacedPoliciesCapabilities={oci/*,net/*}
+    kubectl get configmaps -n kubewarden policy-server-default -o json | yq '.data["policies.yml"]' | yq -P
+
+    kubectl get configmaps -n kubewarden policy-server-default -o json | jq -e '.data["policies.yml"] | fromjson | to_entries | all(.value.hostCapabilities == ["*"])'
+
+
+# ps,ap,
+    # default ps behaves the same as secondary ps
+    # all ps behave the same
+    # cap has always *
+    # ap has value from namespacedPoliciesCapabilities
+    # ap has default *
+
+        # Helm app version is consistent
+    helm list -n "$NAMESPACE" -o json | jq 'map(.app_version) | unique | length == 1'
+    # Check auto-install annotation
+    test "$(helm_get kubewarden-controller '.annotations["catalog.cattle.io/auto-install"] | split("=")[1]')" = "$(helm_get kubewarden-crds '.version')"
+    test "$(helm_get kubewarden-defaults '.annotations["catalog.cattle.io/auto-install"] | split("=")[1]')" = "$(helm_get kubewarden-crds '.version')"
+
+    # Hauler manifest versions for PRs
+    if [[ "$CHARTS_LOCATION" == */* ]]; then
+        # Get versions from upstream policy-reporter
+        local polrep_ver polrep_url
+        polrep_ver=$(helm_get kubewarden-controller '.dependencies[] | select(.name=="policy-reporter").version')
+        polrep_url=https://github.com/kyverno/policy-reporter/releases/download/policy-reporter-$polrep_ver/policy-reporter-$polrep_ver.tgz
+
+        # Helm Charts
+        for chart in kubewarden-crds kubewarden-controller kubewarden-defaults; do
+            test "$(haul_get kubewarden-helm-charts $chart)" = "$(helm_get $chart '.version')"
+        done
+        test "$(haul_get kubewarden-helm-charts policy-reporter)" = "$polrep_ver"
+        test "$(haul_get kubewarden-helm-charts openreports)" = "$(helm_get kubewarden-crds '.dependencies[] | select(.name=="openreports").version')"
+
+        # Signed images
+        test "$(haul_get kubewarden-container-images kubewarden-controller)" = "$(helm_get kubewarden-controller '.image.tag')"
+        test "$(haul_get kubewarden-container-images audit-scanner)" = "$(helm_get kubewarden-controller '.auditScanner.image.tag')"
+        test "$(haul_get kubewarden-container-images policy-server)" = "$(helm_get kubewarden-defaults '.policyServer.image.tag')"
+
+        # Unsigned images
+        test "$(haul_get kubewarden-not-signed-images policy-reporter)" = "$(helm show chart $polrep_url | yq -e '.appVersion')"
+        test "$(haul_get kubewarden-not-signed-images policy-reporter-ui)" = "$(helm show values $polrep_url | yq -e '.ui.image.tag')"
+        test "$(haul_get kubewarden-not-signed-images kuberlr-kubectl)" = "$(helm_get kubewarden-controller '.preDeleteJob.image.tag')"
+        # Policies
+        for policy in allow-privilege-escalation-psp capabilities-psp host-namespaces-psp hostpaths-psp pod-privileged user-group-psp; do
+            test "$(haul_get kubewarden-policies $policy)" \
+                = "$(helm_get kubewarden-defaults | p=$policy yq '.recommendedPolicies[].module? | select(.repository == "*"+env(p)).tag')"
+        done
+    fi
+}
+
+# Create pod-privileged policy to block CREATE & UPDATE of privileged pods
+@test "$(tfile) Apply pod-privileged policy that blocks CREATE & UPDATE" {
+    apply_policy privileged-pod-policy.yaml
+
+    # Launch unprivileged pod
+    kubectl run nginx-unprivileged --image=nginx:alpine
+    wait_for pod nginx-unprivileged
+
+    # Launch privileged pod (should fail)
+    kubefail_privileged run pod-privileged --image=rancher/pause:3.2 --privileged
+}
+
+# Update pod-privileged policy to block only UPDATE of privileged pods
+@test "$(tfile) Patch policy to block only UPDATE operation" {
+    yq '.spec.rules[0].operations = ["UPDATE"]' "$RESOURCES_DIR/policies/privileged-pod-policy.yaml" | kubectl apply -f -
+
+    # I can create privileged pods now
+    kubectl run nginx-privileged --image=nginx:alpine --privileged
+
+    # I can not update privileged pods
+    kubefail_privileged label pod nginx-privileged x=y
+}
+
+@test "$(tfile) Delete ClusterAdmissionPolicy" {
+    delete_policy privileged-pod-policy.yaml
+
+    # I can update privileged pods now
+    kubectl label pod nginx-privileged x=y
+}
+
+@test "$(tfile) Apply mutating psp-user-group AdmissionPolicy" {
+    apply_policy psp-user-group-policy.yaml
+
+    # Policy should mutate pods
+    kubectl run pause-user-group --image rancher/pause:3.2
+    wait_for pod pause-user-group
+    kubectl get pods pause-user-group -o json | jq -e ".spec.containers[].securityContext.runAsUser==1000"
+
+    delete_policy psp-user-group-policy.yaml
+}
+
+@test "$(tfile) Launch & scale second policy server" {
+    create_policyserver e2e-tests
+    wait_for policyserver e2e-tests --for=condition=ServiceReconciled
+
+    kubectl patch policyserver e2e-tests --type=merge -p '{"spec": {"replicas": 2}}'
+    wait_policyserver e2e-tests
+
+    kubectl delete ps e2e-tests
+}

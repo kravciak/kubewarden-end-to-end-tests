@@ -292,7 +292,7 @@ do_install_on_rancher() {
         # Trigger helm operation to install app from repository
         helmop=$(curl -k --fail-with-body --no-progress-meter -u "$rancher_token" -X POST --json "$json" "$rancher_url/v1/catalog.cattle.io.clusterrepos/${repo}?action=install" | jq -re '.operationName')
         retry "kubectl get pod -n cattle-system $helmop | grep -qEw 'Completed|Error'" 20 6
-        kubectl logs -n cattle-system "$helmop" -c helm | tee /dev/tty | grep -qE "^SUCCESS: helm.*/kubewarden-"
+        kubectl logs -n cattle-system "$helmop" -c helm | tee /dev/tty | grep -qE "^SUCCESS: helm.*/admission-controller"
     }
 
     # Merge values from static json and --set parameters
@@ -328,16 +328,13 @@ do_install_on_rancher() {
     jq -ce --arg v "$extver" '.charts[0].version = $v' "$datadir/curl-data-extension.json" | appinstall @- "$extrepo"
 
     # Install Kubewarden charts
-    local argsvar
-    for chart in ${1:-crds controller defaults}; do
-        argsvar=${chart^^}_ARGS
-        # Update app version in json and install
-        jq -ce --arg v "${vMap[$chart]}" '.charts[0].version = $v' "$datadir/curl-data-$chart.json" \
-            | merge_values "${!argsvar}" "${@:2}" \
-            | appinstall @- "kubewarden-charts"
-        [ "$chart" == 'controller' ] && wait_rollout deployment/rancher-kubewarden-controller
-        [ "$chart" == 'defaults' ] && wait_rollout deployment/policy-server-default
-    done
+    local chart='controller'
+    local argsvar=${chart^^}_ARGS
+    # Update app version in json and install
+    jq -ce --arg v "${vMap[$chart]}" '.charts[0].version = $v' "$datadir/curl-data-$chart.json" \
+        | merge_values "${!argsvar}" "${@:2}" \
+        | appinstall @- "kubewarden-charts"
+    wait_rollout deployment/rancher-admission-controller
 
     return 0
 }

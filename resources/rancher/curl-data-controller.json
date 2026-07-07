@@ -1,8 +1,8 @@
 {
   "charts": [
     {
-      "chartName": "kubewarden-controller",
-      "releaseName": "rancher-kubewarden-controller",
+      "chartName": "admission-controller",
+      "releaseName": "rancher-admission-controller",
       "annotations": {
         "catalog.cattle.io/ui-source-repo-type": "cluster",
         "catalog.cattle.io/ui-source-repo": "kubewarden-charts"
@@ -11,6 +11,9 @@
         "global": {
           "priorityClassName": "",
           "systemDefaultRegistry": "ghcr.io"
+        },
+        "recommendedPolicies": {
+          "enabled": true
         },
         "auditScanner" : {
           "policyReporter": true

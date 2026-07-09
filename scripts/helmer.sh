@@ -42,6 +42,7 @@ CHARTS_LOCATION=${CHARTS_LOCATION:-$REPO_NAME}
 # [1|0.5.1] - install from Application Collection
 # - 1: find AppCo (0.5.1) by VERSION (1.33.1) variable (use latest by default)
 # - 0.5.1: use specific AppCo, ignore VERSION variable
+# - next: find MR on gitlab.suse.de
 APPCO="${APPCO:-}"
 
 # [next|prev|v1.17.0-rc2|local] - defaults to local if CHARTS_LOCATION is path, otherwise next
@@ -63,6 +64,26 @@ if [ -n "${MTLS:-}" ]; then
 fi
 # Application Collection defaults
 APPCO_ARGS="--set global.imagePullSecrets[0]=application-collection ${APPCO_ARGS:-}"
+
+if [[ "${APPCO:-}" == "next" ]]; then
+    title='SUSE Security Admission Controller'
+    # Chart
+    mrc=$(glab mr list -R https://gitlab.suse.de/orchid/suse-products-recipes/suse-security/charts --search "$title" -F json --jq '.[0].iid')
+    mr_chart=oci://registry.suse.de/devel/jasmine/charts/suse-security/mr-$mrc/charts/suse-security-admission-controller
+    # Registry
+    mri=$(glab mr list -R https://gitlab.suse.de/orchid/suse-products-recipes/suse-security/rpms-containers --search "$title" -F json --jq '.[0].iid')
+    mr_reg=registry.suse.de/devel/jasmine/containers/suse-security/mr-$mri
+    # 1.37.0
+    mr_tag=$(glab mr list -R https://gitlab.suse.de/orchid/suse-products-recipes/suse-security/charts --search "$title" -F json --jq '.[0].title' | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')
+
+    echo "chart: $mr_chart"
+    echo "reg: $mr_reg"
+    echo "tag: $mr_tag"
+
+    APPCO_ARGS="--set image.registry=$mr_reg --set image.tag=$mr_tag
+    --set auditScanner.image.registry=$mr_reg --set auditScanner.image.tag=$mr_tag
+    --set policyServer.image.registry=$mr_reg --set policyServer.image.tag=$mr_tag ${APPCO_ARGS:-}"
+fi
 
 # Remove "v" prefix
 [[ $APPCO =~ ^v[0-9] ]] && APPCO="${APPCO#v}"
@@ -271,6 +292,12 @@ do_install_appco() {
     # Install policy-server
     kubectl -n "$NAMESPACE" wait --for=condition=Ready pod --selector app.kubernetes.io/instance=ssac
     helm -n "$NAMESPACE" upgrade ssac oci://dp.apps.rancher.io/charts/suse-security-admission-controller --reuse-values --version $version
+
+    # # Install from MR
+    # APPCO_ARGS="--set global.imagePullSecrets[0]=application-collection ${APPCO_ARGS:-}"
+    # APPCO_ARGS="--set image.registry=$mr_reg --set image.tag=$mr_tag
+    #   --set auditScanner.image.registry=$mr_reg --set auditScanner.image.tag=$mr_tag
+    #   --set policyServer.image.registry=$mr_reg --set policyServer.image.tag=$mr_tag ${APPCO_ARGS:-}"
 
     sleep 10 # Wait for reconciliation
     wait_rollout deployment/policy-server-default

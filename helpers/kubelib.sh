@@ -173,6 +173,10 @@ precheck() {
         fi
     fi
 
+    if [[ "${APPCO:-}" = "next" ]]; then
+        curl -I --connect-timeout 2 gitlab.suse.de &>/dev/null || return 1
+    fi
+
     case "$cmd" in
         cluster)
             if kubectl cluster-info &>/dev/null; then

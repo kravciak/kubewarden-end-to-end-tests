@@ -68,8 +68,16 @@ function wait_for () {
     [[ " $* " == *" --for"* ]] && for_flag=""
     kubectl wait --timeout=5m $for_flag "$@"
 }
-# Wait for terminating pods after rollout
-function wait_rollout() { kubectl rollout status --timeout=5m -n "$NAMESPACE" "$@"; wait_pods; }
+
+# Wait for deployment rollout to complete
+# Usage: wait_rollout [options] deployment/<name>
+function wait_rollout() {
+    # Wait for deployment to be created
+    kubectl wait --for=create --timeout=1m -n "$NAMESPACE" "${@: -1}"
+    kubectl rollout status --timeout=5m -n "$NAMESPACE" "$@"
+    # Wait for terminating pods after rollout
+    wait_pods
+}
 
 # Wait for cluster to come up after reboot
 function wait_cluster() {
@@ -113,7 +121,7 @@ is_version() {
 }
 
 # Query against installed kubewarden app version
-kw_version() { is_version "$1" "$(helm ls -n "$NAMESPACE" -f 'admission-controller|ssac' -o json | jq -r '.[0].app_version')"; }
+kw_version() { is_version "$1" "$(helm ls -n "$NAMESPACE" -f 'kubewarden-controller|admission-controller|ssac' -o json | jq -r '.[0].app_version')"; }
 
 is_appco() { [ -n "${APPCO:-}" ] || helm status -n $NAMESPACE ssac &>/dev/null; }
 

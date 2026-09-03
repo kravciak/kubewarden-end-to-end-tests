@@ -113,7 +113,7 @@ is_version() {
 }
 
 # Query against installed kubewarden app version
-kw_version() { is_version "$1" "$(helm ls -n "$NAMESPACE" -f 'admission-controller|ssac' -o json | jq -r '.[0].app_version')"; }
+kw_version() { is_version "$1" "$(helm ls -n "$NAMESPACE" -f 'kubewarden-controller|admission-controller|ssac' -o json | jq -r '.[0].app_version')"; }
 
 is_appco() { [ -n "${APPCO:-}" ] || helm status -n $NAMESPACE ssac &>/dev/null; }
 

@@ -7,7 +7,7 @@ setup() {
     # FQDN=$(k3d node get k3d-$CLUSTER_NAME-server-0 -o json | jq -r 'first.IP.IP').nip.io
     FQDN=$(kubectl get nodes -l 'node-role.kubernetes.io/control-plane' -o custom-columns=INTERNAL-IP:.status.addresses[0].address --no-headers | tail -1).nip.io
 
-    REGISTRY=$FQDN:30707
+    export REGISTRY=$FQDN:30707
     PUB_POLICY=registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5
     PRIV_POLICY=registry://$REGISTRY/kubewarden/tests/pod-privileged:v0.2.5
 }
@@ -40,8 +40,10 @@ teardown_file() {
     kubectl create secret tls registry-cert \
         --cert=$certdir/domain.crt --key=$certdir/domain.key
 
+    # Start registry and wait for it to be ready
     kubectl apply -f $RESOURCES_DIR/private-registry-deploy.yaml
     kubectl rollout status --timeout=5m 'deploy/registry'
+    retry 'test "$(curl -sk -o /dev/null -w "%{http_code}" -u testuser:testpassword "https://$REGISTRY/v2/")" = "200"' 4 5
 }
 
 @test "$(tfile) Pull & Push policy to registry" {
@@ -59,10 +61,11 @@ teardown_file() {
 # https://docs.kubewarden.io/operator-manual/policy-servers/private-registry
 @test "$(tfile) Set up policy server access to registry" {
     # Create secret to access registry
-    kubectl --namespace kubewarden create secret docker-registry secret-registry-docker \
-      --docker-username=testuser \
-      --docker-password=testpassword \
-      --docker-server=$REGISTRY
+    kubectl -n $NAMESPACE get secret secret-registry-docker || \
+        kubectl -n $NAMESPACE create secret docker-registry secret-registry-docker \
+        --docker-username=testuser \
+        --docker-password=testpassword \
+        --docker-server=$REGISTRY
 
     # Edit default policy server config
     helmer set admission-controller \
